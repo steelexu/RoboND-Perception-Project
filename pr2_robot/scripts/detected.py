@@ -36,7 +36,7 @@ def send_to_yaml(yaml_filename, dict_list):
 
 
 test_scene_num = Int32()
-test_scene_num.data = 2
+test_scene_num.data = 3
 
 
 
@@ -50,6 +50,7 @@ object_list_param = rospy.get_param('/object_list')
 dropbox_list_param = rospy.get_param('/dropbox')
 yaml_filename = str(test_scene_num.data)+"-zoutput.yaml"
 saved=0
+count=0
 #print dropbox_list_param[0]['group']
 #as red
 
@@ -88,12 +89,14 @@ def detected_callback(detected_msg):
     #rospy.loginfo('Detected  objects: {}'.format(detected_msg.objects[0].label))
     dict_list = []
     global saved
+    global count
     for i in range(0,len(detected_msg.objects)):
-        rospy.loginfo(detected_msg.objects[i].label)
+        #rospy.loginfo(detected_msg.objects[i].label)
         object_name_str=detected_msg.objects[i].label
         points_arr = ros_to_pcl(detected_msg.objects[i].cloud).to_array()
         center_point = np.mean(points_arr, axis=0)[:3]
         if saved == 0:
+             rospy.loginfo(detected_msg.objects[i].label)
              pick_pose = Pose()
              pick_pose.position.x=np.asscalar(center_point[0])
              pick_pose.position.y=np.asscalar(center_point[1])
@@ -104,12 +107,13 @@ def detected_callback(detected_msg):
              object_name.data = object_name_str
              yaml_dict = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
              dict_list.append(yaml_dict)
-        rospy.loginfo(center_point)
+             rospy.loginfo(center_point)
 
     if saved == 0:
-        send_to_yaml(yaml_filename, dict_list)
-        rospy.loginfo(yaml_filename)
-        saved=1
+        send_to_yaml(yaml_filename+str(count), dict_list)
+        rospy.loginfo(yaml_filename+str(count))
+        #saved=1
+        count+=1
 
 
 if __name__ == '__main__':
