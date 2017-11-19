@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import pickle
 import numpy as np
 import tf
@@ -15,7 +17,7 @@ from sensor_stick.pcl_helper import *
 from sensor_stick.msg import DetectedObjectsArray
 from sensor_stick.msg import DetectedObject
 
-
+from pr2_robot.srv import *
 
 
 def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
@@ -36,7 +38,7 @@ def send_to_yaml(yaml_filename, dict_list):
 
 
 test_scene_num = Int32()
-test_scene_num.data = 3
+test_scene_num.data = 1
 
 
 
@@ -90,11 +92,13 @@ def detected_callback(detected_msg):
     dict_list = []
     global saved
     global count
+    left_object=detected_msg.objects
     for i in range(0,len(detected_msg.objects)):
         #rospy.loginfo(detected_msg.objects[i].label)
         object_name_str=detected_msg.objects[i].label
         points_arr = ros_to_pcl(detected_msg.objects[i].cloud).to_array()
         center_point = np.mean(points_arr, axis=0)[:3]
+        rospy.wait_for_service('pick_place_routine')
         if saved == 0:
              rospy.loginfo(detected_msg.objects[i].label)
              pick_pose = Pose()
@@ -108,9 +112,22 @@ def detected_callback(detected_msg):
              yaml_dict = make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose)
              dict_list.append(yaml_dict)
              rospy.loginfo(center_point)
+        try:
+            pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+            left_object.remove(detected_msg.objects[i])
+            for k in range(0,len(left_object)):
+                pcl_collision_pub.publish(left_object[k].cloud)
+            # TODO: Insert your message variables to be sent as a service request
+            resp = pick_place_routine(test_scene_num, object_name, arm_name, pick_pose, place_pose)
+
+            print ("Response: ",resp.success)
+
+        except rospy.ServiceException, e:
+            print "Service call failed: %s"%e
+
 
     if saved == 0:
-        send_to_yaml(yaml_filename+str(count), dict_list)
+        #send_to_yaml(yaml_filename+str(count), dict_list)
         rospy.loginfo(yaml_filename+str(count))
         #saved=1
         count+=1
@@ -122,6 +139,7 @@ if __name__ == '__main__':
     rospy.init_node('detecting', anonymous=True)
     # TODO: Create Subscribers
     pcl_sub = rospy.Subscriber("/detected_objects", DetectedObjectsArray, detected_callback, queue_size=1)
+    pcl_collision_pub = rospy.Publisher("/pr2/3d_map/points", PointCloud2, queue_size=1)
 
 
     # TODO: Spin while node is not shutdown

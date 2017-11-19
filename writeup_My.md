@@ -27,7 +27,7 @@ Complete the code of  extracting features, also i've done with following change:
  
 [train the svm](./train-svm-sigmoid.png)
 
-
+see scripts in my https://github.com/steelexu/RoboND-Perception-Exercises
 
 ### Pick and Place Setup
 
