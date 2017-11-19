@@ -18,7 +18,7 @@ from sensor_stick.msg import DetectedObjectsArray
 from sensor_stick.msg import DetectedObject
 
 from pr2_robot.srv import *
-
+from std_srvs.srv import Empty
 
 def make_yaml_dict(test_scene_num, arm_name, object_name, pick_pose, place_pose):
     yaml_dict = {}
@@ -92,13 +92,15 @@ def detected_callback(detected_msg):
     dict_list = []
     global saved
     global count
-    left_object=detected_msg.objects
+    left_object=detected_msg.objects[:]
+    rospy.wait_for_service('pick_place_routine')
+    rospy.wait_for_service('clear_octomap')
     for i in range(0,len(detected_msg.objects)):
         #rospy.loginfo(detected_msg.objects[i].label)
         object_name_str=detected_msg.objects[i].label
         points_arr = ros_to_pcl(detected_msg.objects[i].cloud).to_array()
         center_point = np.mean(points_arr, axis=0)[:3]
-        rospy.wait_for_service('pick_place_routine')
+        #rospy.wait_for_service('pick_place_routine')
         if saved == 0:
              rospy.loginfo(detected_msg.objects[i].label)
              pick_pose = Pose()
@@ -114,7 +116,10 @@ def detected_callback(detected_msg):
              rospy.loginfo(center_point)
         try:
             pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
+            clear_octomap_routine = rospy.ServiceProxy('/clear_octomap', Empty)
             left_object.remove(detected_msg.objects[i])
+            rospy.loginfo(len(left_object))
+            clear_octomap_routine()
             for k in range(0,len(left_object)):
                 pcl_collision_pub.publish(left_object[k].cloud)
             # TODO: Insert your message variables to be sent as a service request
