@@ -94,7 +94,7 @@ def detected_callback(detected_msg):
     global count
     left_object=detected_msg.objects[:]
     rospy.wait_for_service('pick_place_routine')
-    rospy.wait_for_service('clear_octomap')
+    rospy.wait_for_service('/clear_octomap')
     for i in range(0,len(detected_msg.objects)):
         #rospy.loginfo(detected_msg.objects[i].label)
         object_name_str=detected_msg.objects[i].label
@@ -124,7 +124,7 @@ def detected_callback(detected_msg):
                 pcl_collision_pub.publish(left_object[k].cloud)
             # TODO: Insert your message variables to be sent as a service request
             resp = pick_place_routine(test_scene_num, object_name, arm_name, pick_pose, place_pose)
-
+            clear_octomap_routine()
             print ("Response: ",resp.success)
 
         except rospy.ServiceException, e:
